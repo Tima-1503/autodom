@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Работы сотрудника</title>
+    <script>
+        function startTimer(duration, display) {
+            let timer = duration, minutes, seconds;
+            setInterval(function () {
+                minutes = parseInt(timer / 60, 10);
+                seconds = parseInt(timer % 60, 10);
+                display.textContent = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+                if (--timer < 0) timer = 0;
+            }, 1000);
+        }
+    </script>
+</head>
+<body>
+    <h1>Доступные работы</h1>
+    <form method="POST" action="{% url 'make_pause' %}">
+        {% csrf_token %}
+        <input type="hidden" name="executor" value="{{ executor }}">
+        <select name="worknum">
+            {% for work in works %}
+                <option value="{{ work.worknum }}">{{ work.description }} (Время: <span id="timer_{{ work.worknum }}">{{ work.time }}</span>)</option>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        let duration = {{ work.time|default:0 }} * 60; // Предполагаем, что время в минутах
+                        let display = document.querySelector('#timer_{{ work.worknum }}');
+                        startTimer(duration, display);
+                    });
+                </script>
+            {% endfor %}
+        </select>
+        <button type="submit">Выбрать</button>
+    </form>
+</body>
+</html>

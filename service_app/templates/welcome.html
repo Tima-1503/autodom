@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление работами</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body {
+            padding: 10px;
+            background-color: #f8f9fa;
+            font-size: 14px;
+        }
+        .container-fluid {
+            max-width: 1200px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        .table {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+        .table th, .table td {
+            padding: 6px;
+            vertical-align: middle;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .timer {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .negative {
+            color: red;
+        }
+        .disabled-table {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        .alert {
+            font-size: 0.9rem;
+            padding: 8px;
+            margin-top: 10px;
+        }
+        .btn {
+            font-size: 0.9rem;
+            padding: 5px 10px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="text-center">Управление работами</h1>
+
+        <div class="mb-3">
+            <label for="executor" class="form-label">Сотрудник:</label>
+            <select class="form-select" id="executor" onchange="fetchOrders()">
+                <option value="">Выберите сотрудника</option>
+                {% for worker in workerssarray %}
+                    <option value="{{ worker.Code }}">{{ worker.Worker }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <h3 class="text-center">Заказы</h3>
+                <div class="table-container">
+                    <table class="table table-bordered table-hover" id="ordersTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Номер</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <h3 class="text-center">Работы</h3>
+                <div class="table-container">
+                    <table class="table table-bordered table-hover" id="worksTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Выбор</th>
+                                <th>Описание</th>
+                                <th>Время</th>
+                            </tr>
+                        </thead>
+                        <tbody id="worksList"></tbody>
+                    </table>
+                </div>
+                <div id="timerDisplay" class="timer text-center"></div>
+                <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                <div class="mt-2 text-center">
+                    <button class="btn btn-primary me-1" id="startButton" onclick="startWork()" disabled>Начать</button>
+                    <button class="btn btn-secondary me-1" id="pauseButton" onclick="togglePause()" disabled>Пауза</button>
+                    <button class="btn btn-success" id="finishButton" onclick="finishWork()" disabled>Завершить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        const sessions = {};
+        let currentSessionKey = null;
+        let selectedOrderDescription = null;
+
+        function fetchOrders() {
+            const executorCode = document.getElementById('executor').value;
+            const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+            if (executorCode) {
+                console.log('Fetching orders for:', executorName);
+                Object.keys(sessions).forEach(key => {
+                    if (sessions[key].timerInterval) clearInterval(sessions[key].timerInterval);
+                    delete sessions[key];
+                });
+                currentSessionKey = null;
+                selectedWork = null;
+                selectedOrder = null;
+                selectedOrderDescription = null;
+                document.getElementById('worksList').innerHTML = '';
+                document.getElementById('timerDisplay').textContent = '';
+                document.getElementById('errorMessage').style.display = 'none';
+                resetTimer(null);
+
+                fetch('/get_orders/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: 'executor_name=' + encodeURIComponent(executorName)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Raw response:', text);
+                    return JSON.parse(text);
+                })
+                .then(data => {
+                    const tbody = document.getElementById('ordersTable').querySelector('tbody');
+                    tbody.innerHTML = '';
+                    data.orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.classList.add('fade-in');
+                        row.innerHTML = `
+                            <td>${order.OrderNumber}</td>
+                            <td>${order.Order}${order.Car ? '<br>' + order.Car : ''}</td>
+                        `;
+                        row.onclick = () => {
+                            selectedOrder = order.OrderNumber;
+                            selectedOrderDescription = `${order.Order}${order.Car ? ', ' + order.Car : ''}`;
+                            selectedWork = null;
+                            document.querySelectorAll('#ordersTable tr').forEach(r => r.classList.remove('table-active'));
+                            row.classList.add('table-active');
+                            fetchWorks(order.OrderNumber, executorName);
+                        };
+                        tbody.appendChild(row);
+                    });
+                    checkActiveSession(executorName, null);
+                })
+                .catch(error => {
+                    console.error('Error fetching orders:', error);
+                    const errorMessage = document.getElementById('errorMessage');
+                    errorMessage.textContent = 'Ошибка загрузки заказов: ' + error.message;
+                    errorMessage.style.display = 'block';
+                });
+            }
+        }
+
+        let selectedOrder = null;
+        let selectedWork = null;
+
+        function fetchWorks(order, executorName) {
+            console.log('Fetching works for order:', order);
+            fetch('/works/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `executor_name=${encodeURIComponent(executorName)}&order=${encodeURIComponent(order)}`
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw works response:', text);
+                return JSON.parse(text);
+            })
+            .then(data => {
+                const worksList = document.getElementById('worksList');
+                if (!currentSessionKey) {
+                    worksList.innerHTML = '';
+                    if (data.error) {
+                        const row = document.createElement('tr');
+                        row.classList.add('fade-in');
+                        row.innerHTML = `<td colspan="3" class="text-danger">${data.error}</td>`;
+                        worksList.appendChild(row);
+                    } else if (data.works.length === 0) {
+                        const row = document.createElement('tr');
+                        row.classList.add('fade-in');
+                        row.innerHTML = `<td colspan="3">Нет доступных работ</td>`;
+                        worksList.appendChild(row);
+                    } else {
+                        data.works.forEach(work => {
+                            if (!work.Work.includes('(уже запущена ранее)')) {
+                                const row = document.createElement('tr');
+                                row.classList.add('fade-in');
+                                row.innerHTML = `
+                                    <td><input type="radio" name="work" value="${work.Code}" data-seconds="${work.Sec}" data-time="${work.ZE}" data-worker-code="${work.WorkerCode || document.getElementById('executor').value}"></td>
+                                    <td>${work.Code} ${work.Work}</td>
+                                    <td>${work.ZE}</td>
+                                `;
+                                row.querySelector('input').onchange = () => {
+                                    selectedWork = work;
+                                    document.getElementById('startButton').disabled = false;
+                                    console.log('Work selected:', selectedWork);
+                                };
+                                worksList.appendChild(row);
+                            }
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching works:', error);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Ошибка загрузки работ: ' + error.message;
+                errorMessage.style.display = 'block';
+            });
+        }
+
+        function checkActiveSession(executorName, workCode) {
+            fetch('/pause/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `action=check&executor=${encodeURIComponent(executorName)}&worknum=${workCode || ''}`
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw pause response:', text);
+                return JSON.parse(text);
+            })
+            .then(data => {
+                const worksList = document.getElementById('worksList');
+                const ordersTable = document.getElementById('ordersTable');
+                if (data.session && data.session.is_active) {
+                    const sessionKey = `${data.session.worker_code}-${data.session.work_code}`;
+                    currentSessionKey = sessionKey;
+                    selectedOrder = data.session.order_number;
+                    selectedWork = {
+                        Code: data.session.work_code,
+                        Sec: data.session.time_left,
+                        WorkerCode: data.session.worker_code,
+                        Work: data.session.work_description || `${data.session.work_code} ${data.session.order_number} (уже запущена ранее)`
+                    };
+
+                    sessions[sessionKey] = {
+                        intervals: JSON.parse(data.session.intervals),
+                        currentStart: data.session.current_start,
+                        timeLeft: data.session.time_left || 0,
+                        isPaused: !data.session.current_start,
+                        timerInterval: null
+                    };
+
+                    worksList.innerHTML = '';
+                    const row = document.createElement('tr');
+                    row.classList.add('fade-in');
+                    row.innerHTML = `
+                        <td>-</td>
+                        <td>${selectedWork.Work}</td>
+                        <td>-</td>
+                    `;
+                    worksList.appendChild(row);
+
+                    ordersTable.classList.add('disabled-table');
+
+                    if (sessions[sessionKey].currentStart) {
+                        const startTime = new Date(sessions[sessionKey].currentStart.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1'));
+                        const now = new Date();
+                        const elapsedSeconds = Math.floor((now - startTime) / 1000);
+                        sessions[sessionKey].timeLeft = Math.max(data.session.time_left - elapsedSeconds, 0);
+                        document.getElementById('startButton').disabled = true;
+                        document.getElementById('pauseButton').disabled = false;
+                        document.getElementById('finishButton').disabled = false;
+                        sessions[sessionKey].isPaused = false;
+                        startTimer(sessionKey);
+                    } else {
+                        document.getElementById('startButton').disabled = true;
+                        document.getElementById('pauseButton').disabled = false;
+                        document.getElementById('pauseButton').textContent = 'Продолжить';
+                        document.getElementById('finishButton').disabled = false;
+                        sessions[sessionKey].isPaused = true;
+                    }
+                    console.log('Restored active session:', sessions[sessionKey]);
+                } else if (!workCode) {
+                    worksList.innerHTML = '';
+                    const row = document.createElement('tr');
+                    row.classList.add('fade-in');
+                    row.innerHTML = `<td colspan="3">Нет активных работ</td>`;
+                    worksList.appendChild(row);
+                    ordersTable.classList.remove('disabled-table');
+                    resetTimer(null);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking session:', error);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Ошибка проверки сессии: ' + error.message;
+                errorMessage.style.display = 'block';
+            });
+        }
+
+        function startWork() {
+            if (!selectedWork || !selectedOrderDescription || !selectedOrder) {
+                console.error('No work or order selected');
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Выберите работу для начала.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+            fetch('/pause/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `action=check&executor=${encodeURIComponent(executorName)}`
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw start check response:', text);
+                return JSON.parse(text);
+            })
+            .then(data => {
+                if (data.session && data.session.is_active) {
+                    const errorMessage = document.getElementById('errorMessage');
+                    errorMessage.textContent = 'У вас уже есть активная работа. Завершите её перед началом новой.';
+                    errorMessage.style.display = 'block';
+                    console.log('Cannot start new work: active session exists');
+                } else {
+                    const sessionKey = `${selectedWork.WorkerCode}-${selectedWork.Code}`;
+                    currentSessionKey = sessionKey;
+                    const fullDescription = `Заказ наряд ${selectedOrder} от ${new Date().toLocaleString('ru-RU')}, ${selectedOrderDescription}, Номер заказа: ${selectedOrder} ${selectedWork.Code} ${selectedWork.Work}`;
+                    sessions[sessionKey] = {
+                        timeLeft: parseInt(selectedWork.Sec),
+                        intervals: [],
+                        currentStart: new Date().toLocaleString('ru-RU'),
+                        isPaused: false,
+                        timerInterval: null
+                    };
+                    selectedWork.Work = fullDescription;
+                    document.getElementById('startButton').disabled = true;
+                    document.getElementById('pauseButton').disabled = false;
+                    document.getElementById('finishButton').disabled = false;
+
+                    const worksList = document.getElementById('worksList');
+                    worksList.innerHTML = '';
+                    const row = document.createElement('tr');
+                    row.classList.add('fade-in');
+                    row.innerHTML = `
+                        <td>-</td>
+                        <td>${selectedWork.Work}</td>
+                        <td>-</td>
+                    `;
+                    worksList.appendChild(row);
+
+                    document.getElementById('ordersTable').classList.add('disabled-table');
+
+                    startTimer(sessionKey);
+                    sendTo1C('start', sessionKey);
+                    document.getElementById('errorMessage').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error checking active session:', error);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Ошибка начала работы: ' + error.message;
+                errorMessage.style.display = 'block';
+            });
+        }
+
+        function togglePause() {
+            if (!currentSessionKey || !sessions[currentSessionKey]) return;
+
+            const pauseButton = document.getElementById('pauseButton');
+            if (sessions[currentSessionKey].isPaused) {
+                sessions[currentSessionKey].currentStart = new Date().toLocaleString('ru-RU');
+                startTimer(currentSessionKey);
+                pauseButton.textContent = 'Пауза';
+                sendTo1C('resume', currentSessionKey);
+            } else {
+                clearInterval(sessions[currentSessionKey].timerInterval);
+                sessions[currentSessionKey].intervals.push({
+                    start: sessions[currentSessionKey].currentStart,
+                    end: new Date().toLocaleString('ru-RU')
+                });
+                sessions[currentSessionKey].currentStart = null;
+                pauseButton.textContent = 'Продолжить';
+                sendTo1C('pause', currentSessionKey);
+            }
+            sessions[currentSessionKey].isPaused = !sessions[currentSessionKey].isPaused;
+            console.log('Pause toggled, intervals:', sessions[currentSessionKey].intervals);
+        }
+
+        function finishWork() {
+            if (!currentSessionKey || !sessions[currentSessionKey]) return;
+
+            clearInterval(sessions[currentSessionKey].timerInterval);
+            if (sessions[currentSessionKey].currentStart) {
+                sessions[currentSessionKey].intervals.push({
+                    start: sessions[currentSessionKey].currentStart,
+                    end: new Date().toLocaleString('ru-RU')
+                });
+            }
+            sendTo1C('finish', currentSessionKey);
+            resetTimer(currentSessionKey);
+            const worksList = document.getElementById('worksList');
+            worksList.innerHTML = '';
+            const row = document.createElement('tr');
+            row.classList.add('fade-in');
+            row.innerHTML = `<td colspan="3">Нет активных работ</td>`;
+            worksList.appendChild(row);
+            document.getElementById('ordersTable').classList.remove('disabled-table');
+            console.log('Work finished, intervals:', sessions[currentSessionKey].intervals);
+            delete sessions[currentSessionKey];
+            currentSessionKey = null;
+            selectedWork = null;
+        }
+
+        function startTimer(sessionKey) {
+            if (!sessions[sessionKey]) return;
+            if (sessions[sessionKey].timerInterval) clearInterval(sessions[sessionKey].timerInterval);
+            sessions[sessionKey].timerInterval = setInterval(() => {
+                if (sessionKey === currentSessionKey) {
+                    let hours = Math.floor(sessions[sessionKey].timeLeft / 3600);
+                    let minutes = Math.floor((sessions[sessionKey].timeLeft % 3600) / 60);
+                    let secs = sessions[sessionKey].timeLeft % 60;
+                    const timerDisplay = document.getElementById('timerDisplay');
+                    timerDisplay.textContent = `Осталось: ${hours} ч. ${minutes} м. ${secs} с.`;
+                    if (sessions[sessionKey].timeLeft < 0) timerDisplay.classList.add('negative');
+                    sessions[sessionKey].timeLeft--;
+                }
+            }, 1000);
+        }
+
+        function resetTimer(sessionKey) {
+            if (sessionKey && sessions[sessionKey] && sessions[sessionKey].timerInterval) {
+                clearInterval(sessions[sessionKey].timerInterval);
+            }
+            document.getElementById('timerDisplay').textContent = '';
+            document.getElementById('timerDisplay').classList.remove('negative');
+            document.getElementById('startButton').disabled = !selectedWork || selectedWork.Work.includes('(уже запущена ранее)');
+            document.getElementById('pauseButton').disabled = true;
+            document.getElementById('pauseButton').textContent = 'Пауза';
+            document.getElementById('finishButton').disabled = true;
+            if (!sessionKey) {
+                Object.keys(sessions).forEach(key => {
+                    if (sessions[key].timerInterval) clearInterval(sessions[key].timerInterval);
+                    delete sessions[key];
+                });
+            }
+            console.log('Timer reset, startButton disabled:', document.getElementById('startButton').disabled);
+        }
+
+        function sendTo1C(action, sessionKey) {
+            const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+            const workerCode = selectedWork.WorkerCode || document.getElementById('executor').value;
+
+            const body = new URLSearchParams();
+            body.append('action', action);
+            body.append('ordernum', selectedOrder);
+            body.append('worknum', selectedWork.Code);
+            body.append('executor', executorName);
+            body.append('worker_code', workerCode);
+            body.append('intervals', JSON.stringify(sessions[sessionKey].intervals));
+            body.append('current_start', sessions[sessionKey].currentStart || '');
+            body.append('time_left', sessions[sessionKey].timeLeft);
+            body.append('work_description', selectedWork.Work.replace(' (уже запущена ранее)', ''));
+
+            fetch('/pause/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: body.toString()
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw sendTo1C response:', text);
+                return JSON.parse(text);
+            })
+            .then(data => {
+                console.log(`${action} result:`, data);
+                if (data.message && data.message.includes('1C server not available')) {
+                    console.warn('1C server is not available, request logged to file');
+                }
+            })
+            .catch(error => {
+                console.error(`Error on ${action}:`, error);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Ошибка отправки в 1C: ' + error.message;
+                errorMessage.style.display = 'block';
+            });
+        }
+
+        window.addEventListener('beforeunload', () => {
+            Object.keys(sessions).forEach(sessionKey => {
+                if (sessions[sessionKey].timerInterval || sessions[sessionKey].isPaused) {
+                    sendTo1C(sessions[sessionKey].isPaused ? 'pause' : 'update', sessionKey);
+                    console.log('Session saved before unload:', sessionKey);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
