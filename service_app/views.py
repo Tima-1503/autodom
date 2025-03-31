@@ -62,11 +62,17 @@ def get_works(request):
         except requests.RequestException as e:
             works = []
 
-        active_session = WorkSession.objects.filter(executor=executor, is_active=True).first()
+        # Фильтруем работы, исключая те, что уже есть в активных сессиях
+        active_sessions = WorkSession.objects.filter(executor=executor, is_active=True)
+        active_work_codes = {session.work_code for session in active_sessions}
+        works = [work for work in works if work['Code'] not in active_work_codes]
+
+        # Если есть активная работа (не на паузе), показываем только её
+        active_session = active_sessions.filter(current_start__isnull=False).first()
         if active_session:
             works = [{
                 'Code': active_session.work_code,
-                'Work': active_session.work_description or active_session.work_code,  # Используем сохранённое описание
+                'Work': active_session.work_description or active_session.work_code,
                 'ZE': 'N/A',
                 'Sec': active_session.time_left,
                 'WorkerCode': active_session.worker_code
@@ -80,96 +86,227 @@ def make_pause(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         ordernum = request.POST.get('ordernum', '')
-        worknum = request.POST.get('worknum', '')
+        worknum = request.POST.get('worknum', '').strip()
         executor = request.POST.get('executor', '')
         worker_code = request.POST.get('worker_code', '')
         intervals = request.POST.get('intervals', '[]')
         current_start = request.POST.get('current_start', '')
         time_left = request.POST.get('time_left', '0')
-        work_description = request.POST.get('work_description', '')  # Новое поле для описания
+        work_description = request.POST.get('work_description', '')
+        reason_code = request.POST.get('reason_code', '')
+        start = request.POST.get('start', '')
+        end = request.POST.get('end', '')
 
         print(
-            f"Action: {action}, Order: {ordernum}, Work: {worknum}, Executor: {executor}, WorkerCode: {worker_code}, Intervals: {intervals}, CurrentStart: {current_start}, TimeLeft: {time_left}, Description: {work_description}")
+            f"Action: {action}, Order: {ordernum}, Work: {worknum}, Executor: {executor}, WorkerCode: {worker_code}, "
+            f"Intervals: {intervals}, CurrentStart: {current_start}, TimeLeft: {time_left}, Description: {work_description}, "
+            f"ReasonCode: {reason_code}, Start: {start}, End: {end}")
 
         if action in ['start', 'resume', 'pause', 'finish', 'update'] and not all(
-                [ordernum, worknum, executor, worker_code]):
+                [ordernum, worknum, executor]):
             return JsonResponse({'error': 'Missing required parameters'}, status=400)
 
         if action == 'check':
-            session = WorkSession.objects.filter(executor=executor, work_code=worknum,
-                                                 is_active=True).first() if worknum else WorkSession.objects.filter(
-                executor=executor, is_active=True).first()
-            result = {
-                'session': {
-                    'session_id': session.session_id,
-                    'order_number': session.order_number,
-                    'work_code': session.work_code,
-                    'worker_code': session.worker_code,
-                    'intervals': session.intervals,
-                    'current_start': session.current_start,
-                    'time_left': session.time_left,
-                    'is_active': session.is_active,
-                    'work_description': session.work_description
-                } if session else None
-            }
-        else:
-            session, created = WorkSession.objects.get_or_create(
-                worker_code=worker_code,
-                work_code=worknum,
-                is_active=True,
-                defaults={
-                    'session_id': str(uuid.uuid4()),
-                    'worker_code': worker_code,
-                    'order_number': ordernum,
-                    'work_code': worknum,
-                    'executor': executor,
-                    'intervals': intervals,
-                    'current_start': current_start if current_start else None,
-                    'time_left': int(time_left) if time_left else 0,
-                    'is_active': True,
-                    'work_description': work_description  # Сохраняем описание
-                }
-            )
+            try:
+                session = WorkSession.objects.filter(executor=executor, work_code=worknum,
+                                                    is_active=True).first()
+                if session and session.current_start:
+                    try:
+                        start_time = datetime.strptime(session.current_start, '%d.%m.%Y %H:%M:%S')
+                        now = datetime.now()
+                        elapsed_seconds = int((now - start_time).total_seconds())
+                        updated_time_left = session.initial_time_left - elapsed_seconds
+                        session.time_left = max(updated_time_left, 0)
+                        session.save()
+                        print(f"Check: Updated time_left to {session.time_left}")
+                    except ValueError as e:
+                        print(f"Error parsing current_start '{session.current_start}': {str(e)}")
+                        return JsonResponse({'error': f"Invalid current_start format: {str(e)}"}, status=500)
 
-            if not created:
+                result = {
+                    'session': {
+                        'session_id': session.session_id if session else None,
+                        'order_number': session.order_number if session else None,
+                        'work_code': session.work_code if session else None,
+                        'worker_code': session.worker_code if session else None,
+                        'intervals': session.intervals if session else '[]',
+                        'current_start': session.current_start if session else None,
+                        'time_left': session.time_left if session else 0,
+                        'is_active': session.is_active if session else False,
+                        'work_description': session.work_description if session else None,
+                        'last_action': session.last_action if session else None,  # Добавляем в ответ
+                        'pause_reason_code': session.pause_reason_code if session else None  # Добавляем в ответ
+                    } if session else None
+                }
+                print(f"Returning check result: {result}")
+                return JsonResponse(result)
+            except Exception as e:
+                print(f"Error in check action: {str(e)}")
+                return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)
+
+        elif action == 'check_all':
+            try:
+                sessions_list = WorkSession.objects.filter(executor=executor, is_active=True)
+                for session in sessions_list:
+                    if session.current_start:
+                        try:
+                            start_time = datetime.strptime(session.current_start, '%d.%m.%Y %H:%M:%S')
+                            now = datetime.now()
+                            elapsed_seconds = int((now - start_time).total_seconds())
+                            updated_time_left = session.initial_time_left - elapsed_seconds
+                            session.time_left = max(updated_time_left, 0)
+                            session.save()
+                            print(f"Check_all: Updated time_left for {session.work_code} to {session.time_left}")
+                        except ValueError as e:
+                            print(f"Error parsing current_start '{session.current_start}': {str(e)}")
+                result = {
+                    'sessions': [
+                        {
+                            'session_id': session.session_id,
+                            'order_number': session.order_number,
+                            'work_code': session.work_code,
+                            'worker_code': session.worker_code,
+                            'intervals': session.intervals,
+                            'current_start': session.current_start,
+                            'time_left': session.time_left,
+                            'is_active': session.is_active,
+                            'work_description': session.work_description,
+                            'last_action': session.last_action,  # Добавляем в ответ
+                            'pause_reason_code': session.pause_reason_code  # Добавляем в ответ
+                        } for session in sessions_list
+                    ]
+                }
+                print(f"Returning all sessions: {result}")
+                return JsonResponse(result)
+            except Exception as e:
+                print(f"Error in check_all action: {str(e)}")
+                return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)
+
+        else:
+            try:
+                session = WorkSession.objects.filter(
+                    executor=executor,
+                    work_code=worknum,
+                    is_active=True
+                ).first()
+
+                if not session and action in ['start', 'resume']:
+                    session = WorkSession(
+                        session_id=str(uuid.uuid4()),
+                        worker_code=worker_code or 'unknown',
+                        order_number=ordernum,
+                        work_code=worknum,
+                        executor=executor,
+                        intervals=intervals,
+                        current_start=current_start if current_start else None,
+                        time_left=int(time_left) if time_left else 0,
+                        initial_time_left=int(time_left) if time_left else 0,
+                        is_active=True,
+                        work_description=work_description,
+                        last_action=action  # Сохраняем действие при создании
+                    )
+                elif not session:
+                    existing_sessions = WorkSession.objects.filter(executor=executor, is_active=True)
+                    print(f"No session found for work {worknum}. Existing sessions: {[s.work_code for s in existing_sessions]}")
+                    return JsonResponse({'error': f'Session not found for work {worknum}'}, status=404)
+
                 try:
                     session.set_intervals(json.loads(intervals))
                 except json.JSONDecodeError as e:
                     print(f"Invalid intervals JSON: {intervals}, error: {str(e)}")
                     session.set_intervals([])
-                session.current_start = current_start if current_start else None
-                session.time_left = int(time_left) if time_left else 0
-                session.is_active = action != 'finish'
+
+                if action == 'start':
+                    session.current_start = current_start
+                    session.time_left = int(time_left)
+                    session.initial_time_left = int(time_left)
+                    session.is_active = True
+                    session.last_action = action  # Сохраняем действие
+                elif action == 'resume':
+                    session.current_start = current_start
+                    session.initial_time_left = int(time_left)
+                    session.time_left = int(time_left)
+                    session.is_active = True
+                    session.last_action = action  # Сохраняем действие
+                    session.pause_reason_code = None  # Сбрасываем reasonCode при возобновлении
+                elif action == 'pause':
+                    if session.current_start:
+                        try:
+                            start_time = datetime.strptime(session.current_start, '%d.%m.%Y %H:%M:%S')
+                            now = datetime.now()
+                            elapsed_seconds = int((now - start_time).total_seconds())
+                            session.time_left = max(session.initial_time_left - elapsed_seconds, 0)
+                            print(f"Pause: Fixed time_left to {session.time_left}")
+                        except ValueError as e:
+                            print(f"Error parsing current_start '{session.current_start}': {str(e)}")
+                            session.time_left = int(time_left)
+                    session.current_start = None
+                    session.is_active = True
+                    session.last_action = action  # Сохраняем действие
+                    session.pause_reason_code = reason_code if reason_code else None  # Сохраняем reasonCode
+                elif action == 'finish':
+                    if session.current_start:
+                        try:
+                            start_time = datetime.strptime(session.current_start, '%d.%m.%Y %H:%M:%S')
+                            now = datetime.now()
+                            elapsed_seconds = int((now - start_time).total_seconds())
+                            session.time_left = max(session.initial_time_left - elapsed_seconds, 0)
+                        except ValueError as e:
+                            print(f"Error parsing current_start '{session.current_start}': {str(e)}")
+                            session.time_left = int(time_left)
+                    session.current_start = None
+                    session.is_active = False
+                    session.last_action = action  # Сохраняем действие
+                    session.pause_reason_code = None  # Сбрасываем reasonCode при завершении
+                elif action == 'update':
+                    session.time_left = int(time_left)
+                    session.current_start = current_start if current_start else None
+                    session.last_action = action  # Сохраняем действие
+
                 if work_description:
                     session.work_description = work_description
+                session.worker_code = worker_code or session.worker_code
                 session.save()
 
-            if action == "finish":
-                data = {
-                    "SessionID": session.session_id,
-                    "WorkerCode": worker_code,
-                    "OrderNumber": ordernum,
-                    "WorkCode": worknum,
-                    "Action": action,
-                    "Intervals": json.loads(intervals) if intervals else []
-                }
-                try:
-                    with open('1c_requests.txt', 'a', encoding='utf-8') as f:
-                        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        f.write(f"[{timestamp}] POST to {BASE_URL}/mpause\n")
-                        f.write(f"Data: {json.dumps(data, ensure_ascii=False, indent=2)}\n")
-                        f.write("---\n")
-                    result = {
-                        'status': 'logged',
-                        'message': 'Request logged to 1c_requests.txt (1C server not available)'
+                if action in ["start", "pause", "resume", "finish"]:
+                    data = {
+                        "OrderNumber": ordernum,
+                        "WorkerCode": worker_code,
+                        "WorkCode": worknum,
+                        "Action": action,
+                        "Intervals": {}
                     }
-                except Exception as e:
-                    print(f"Error writing to file: {str(e)}")
-                    result = {'error': f'Failed to log request: {str(e)}'}
-            else:
-                result = {'status': 'saved', 'message': 'Session updated in database'}
+                    if action == "start" or action == "resume":
+                        data["Intervals"]["start"] = start
+                    elif action == "pause" and reason_code:
+                        data["Intervals"]["start"] = start
+                        data["Intervals"]["end"] = end
+                        data["Intervals"]["reasonCode"] = reason_code
+                    elif action == "finish":
+                        data["Intervals"]["start"] = start
+                        data["Intervals"]["end"] = end
 
-        return JsonResponse(result, safe=False)
+                    try:
+                        with open('1c_requests.txt', 'a', encoding='utf-8') as f:
+                            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            f.write(f"[{timestamp}] POST to {BASE_URL}/mpause\n")
+                            f.write(f"Data: {json.dumps(data, ensure_ascii=False, indent=2)}\n")
+                            f.write("---\n")
+                        result = {
+                            'status': 'logged',
+                            'message': 'Request logged to 1c_requests.txt (1C server not available)'
+                        }
+                    except Exception as e:
+                        print(f"Error writing to file: {str(e)}")
+                        result = {'error': f'Failed to log request: {str(e)}'}
+                else:
+                    result = {'status': 'saved', 'message': 'Session updated in database'}
+
+                return JsonResponse(result)
+            except Exception as e:
+                print(f"Error in action {action}: {str(e)}")
+                return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)
+
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
