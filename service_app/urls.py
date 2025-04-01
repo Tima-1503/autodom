@@ -7,4 +7,5 @@ urlpatterns = [
     path('pause/', views.make_pause, name='make_pause'),
     path('cars/<str:executor>/', views.get_cars, name='get_cars'),
     path('get_orders/', views.get_orders, name='get_orders'),
+path('get_pause_reasons/', views.get_pause_reasons, name='get_pause_reasons'),
 ]

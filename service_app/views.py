@@ -6,7 +6,7 @@ from urllib.parse import quote
 import uuid
 from datetime import datetime
 import requests
-from .models import WorkSession
+from .models import WorkSession, WorkSessionAction, PauseReason
 
 BASE_URL = "http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI"
 USERNAME = "ВнешнееСоединение"
@@ -90,7 +90,7 @@ def make_pause(request):
         executor = request.POST.get('executor', '')
         worker_code = request.POST.get('worker_code', '')
         intervals = request.POST.get('intervals', '[]')
-        current_start = request.POST.get('current_start', '')
+        current_start = request.POST.get('start', '')  # Используем 'start' вместо 'current_start'
         time_left = request.POST.get('time_left', '0')
         work_description = request.POST.get('work_description', '')
         reason_code = request.POST.get('reason_code', '')
@@ -134,8 +134,15 @@ def make_pause(request):
                         'time_left': session.time_left if session else 0,
                         'is_active': session.is_active if session else False,
                         'work_description': session.work_description if session else None,
-                        'last_action': session.last_action if session else None,  # Добавляем в ответ
-                        'pause_reason_code': session.pause_reason_code if session else None  # Добавляем в ответ
+                        'actions': [
+                            {
+                                'action': action.action,
+                                'reason_code': action.reason_code,
+                                'start': action.start,
+                                'end': action.end,
+                                'timestamp': action.timestamp.isoformat()
+                            } for action in session.actions.all()
+                        ] if session else []
                     } if session else None
                 }
                 print(f"Returning check result: {result}")
@@ -171,8 +178,15 @@ def make_pause(request):
                             'time_left': session.time_left,
                             'is_active': session.is_active,
                             'work_description': session.work_description,
-                            'last_action': session.last_action,  # Добавляем в ответ
-                            'pause_reason_code': session.pause_reason_code  # Добавляем в ответ
+                            'actions': [
+                                {
+                                    'action': action.action,
+                                    'reason_code': action.reason_code,
+                                    'start': action.start,
+                                    'end': action.end,
+                                    'timestamp': action.timestamp.isoformat()
+                                } for action in session.actions.all()
+                            ]
                         } for session in sessions_list
                     ]
                 }
@@ -202,9 +216,9 @@ def make_pause(request):
                         time_left=int(time_left) if time_left else 0,
                         initial_time_left=int(time_left) if time_left else 0,
                         is_active=True,
-                        work_description=work_description,
-                        last_action=action  # Сохраняем действие при создании
+                        work_description=work_description
                     )
+                    session.save()
                 elif not session:
                     existing_sessions = WorkSession.objects.filter(executor=executor, is_active=True)
                     print(f"No session found for work {worknum}. Existing sessions: {[s.work_code for s in existing_sessions]}")
@@ -221,14 +235,11 @@ def make_pause(request):
                     session.time_left = int(time_left)
                     session.initial_time_left = int(time_left)
                     session.is_active = True
-                    session.last_action = action  # Сохраняем действие
                 elif action == 'resume':
                     session.current_start = current_start
-                    session.initial_time_left = int(time_left)
                     session.time_left = int(time_left)
+                    session.initial_time_left = int(time_left)
                     session.is_active = True
-                    session.last_action = action  # Сохраняем действие
-                    session.pause_reason_code = None  # Сбрасываем reasonCode при возобновлении
                 elif action == 'pause':
                     if session.current_start:
                         try:
@@ -242,8 +253,6 @@ def make_pause(request):
                             session.time_left = int(time_left)
                     session.current_start = None
                     session.is_active = True
-                    session.last_action = action  # Сохраняем действие
-                    session.pause_reason_code = reason_code if reason_code else None  # Сохраняем reasonCode
                 elif action == 'finish':
                     if session.current_start:
                         try:
@@ -256,19 +265,30 @@ def make_pause(request):
                             session.time_left = int(time_left)
                     session.current_start = None
                     session.is_active = False
-                    session.last_action = action  # Сохраняем действие
-                    session.pause_reason_code = None  # Сбрасываем reasonCode при завершении
                 elif action == 'update':
                     session.time_left = int(time_left)
-                    session.current_start = current_start if current_start else None
-                    session.last_action = action  # Сохраняем действие
+                    # Не сбрасываем current_start, если оно уже есть, и используем переданное значение только если оно валидно
+                    if current_start and current_start.strip():
+                        session.current_start = current_start
+                    elif not session.current_start:
+                        session.current_start = datetime.now().strftime('%d.%m.%Y %H:%M:%S')  # Устанавливаем текущее время, если не было
 
-                if work_description:
+                # Всегда обновляем work_description, если оно передано
+                if work_description and work_description.strip():
                     session.work_description = work_description
                 session.worker_code = worker_code or session.worker_code
                 session.save()
 
-                if action in ["start", "pause", "resume", "finish"]:
+                # Сохраняем действие в историю
+                WorkSessionAction.objects.create(
+                    session=session,
+                    action=action,
+                    reason_code=reason_code if action == 'pause' else None,
+                    start=start if action in ['start', 'resume', 'update'] else None,
+                    end=end if action in ['pause', 'finish'] else None
+                )
+
+                if action in ["start", "pause", "resume", "finish", "update"]:
                     data = {
                         "OrderNumber": ordernum,
                         "WorkerCode": worker_code,
@@ -276,7 +296,7 @@ def make_pause(request):
                         "Action": action,
                         "Intervals": {}
                     }
-                    if action == "start" or action == "resume":
+                    if action in ["start", "resume", "update"]:
                         data["Intervals"]["start"] = start
                     elif action == "pause" and reason_code:
                         data["Intervals"]["start"] = start
@@ -321,3 +341,13 @@ def get_cars(request, executor):
     except requests.RequestException as e:
         cars = []
     return JsonResponse(cars)
+def get_pause_reasons(request):
+    if request.method == 'GET':
+        try:
+            reasons = PauseReason.objects.all()
+            reasons_list = [{'code': reason.code, 'description': reason.description} for reason in reasons]
+            return JsonResponse({'pause_reasons': reasons_list})
+        except Exception as e:
+            print(f"Error fetching pause reasons: {str(e)}")
+            return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)
+    return JsonResponse({'error': 'Invalid request'}, status=400)

@@ -148,23 +148,31 @@
                     <h5 class="modal-title" id="pauseReasonModalLabel">Выберите причину паузы</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="pauseReason" id="reason1" value="1" checked>
-                        <label class="form-check-label" for="reason1">1. Обед</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="pauseReason" id="reason2" value="2">
-                        <label class="form-check-label" for="reason2">2. Ожидание запчасти</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="pauseReason" id="reason3" value="3">
-                        <label class="form-check-label" for="reason3">3. Другая машина</label>
-                    </div>
+                <div class="modal-body" id="pauseReasonsContainer">
+                    <!-- Причины будут добавлены динамически -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                     <button type="button" class="btn btn-primary" id="confirmPause">Подтвердить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для подтверждения завершения -->
+    <div class="modal fade" id="finishConfirmationModal" tabindex="-1" aria-labelledby="finishConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="finishConfirmationModalLabel">Подтверждение завершения</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Вы уверены, что хотите завершить работу?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelFinish" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="confirmFinish">ОК</button>
                 </div>
             </div>
         </div>
@@ -177,6 +185,38 @@
         let selectedOrderDescription = null;
         let selectedOrder = null;
         let selectedWork = null;
+
+        function loadPauseReasons() {
+            fetch('/get_pause_reasons/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('pauseReasonsContainer');
+                container.innerHTML = ''; // Очищаем контейнер
+                if (data.pause_reasons && data.pause_reasons.length > 0) {
+                    data.pause_reasons.forEach((reason, index) => {
+                        const div = document.createElement('div');
+                        div.classList.add('form-check');
+                        div.innerHTML = `
+                            <input class="form-check-input" type="radio" name="pauseReason" id="reason${reason.code}" value="${reason.code}" ${index === 0 ? 'checked' : ''}>
+                            <label class="form-check-label" for="reason${reason.code}">${reason.code}. ${reason.description}</label>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = '<p>Причины пауз не найдены.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading pause reasons:', error);
+                const container = document.getElementById('pauseReasonsContainer');
+                container.innerHTML = '<p>Ошибка загрузки причин пауз.</p>';
+            });
+        }
 
         function updateInterfaceLock() {
             const ordersTable = document.getElementById('ordersTable');
@@ -282,7 +322,7 @@
                     `;
                     row.onclick = () => {
                         selectedWork = activeWork;
-                        currentSessionKey = `${activeWork.WorkerCode}-${activeWork.Code}`;
+                        currentSessionKey = `${activeWork.WorkerCode}-${sessions[currentSessionKey].orderNumber}-${activeWork.Code}`;
                         document.getElementById('startButton').disabled = true;
                         document.getElementById('pauseButton').disabled = false;
                         document.getElementById('pauseButton').textContent = 'Пауза';
@@ -303,7 +343,7 @@
                         worksList.appendChild(row);
                     } else {
                         data.works.forEach(work => {
-                            const sessionKey = `${work.WorkerCode || document.getElementById('executor').value}-${work.Code}`;
+                            const sessionKey = `${work.WorkerCode || document.getElementById('executor').value}-${order}-${work.Code}`;
                             if (!sessions[sessionKey]) {
                                 const row = document.createElement('tr');
                                 row.classList.add('fade-in');
@@ -360,7 +400,7 @@
                 });
 
                 Object.entries(uniqueSessions).forEach(([sessionKey, session]) => {
-                    const [workerCodeRaw, workCode] = sessionKey.split('-');
+                    const [workerCodeRaw, orderNumber, workCode] = sessionKey.split('-');
                     const workerCode = (workerCodeRaw === 'undefined' || !workerCodeRaw) ? executorCode : workerCodeRaw;
                     const timeLeft = session.timeLeft;
                     let hours = Math.floor(Math.abs(timeLeft) / 3600);
@@ -391,6 +431,7 @@
                             Work: session.workDescription || `${workCode} (восстановлено)`,
                             Sec: session.timeLeft
                         };
+                        selectedOrder = orderNumber;
                         document.getElementById('startButton').disabled = true;
                         document.getElementById('pauseButton').disabled = false;
                         document.getElementById('pauseButton').textContent = 'Продолжить';
@@ -416,7 +457,6 @@
             .then(response => response.json())
             .then(data => {
                 const worksList = document.getElementById('worksList');
-                const ordersTable = document.getElementById('ordersTable');
                 const executorCode = document.getElementById('executor').value;
 
                 console.log('Sessions from backend:', data.sessions);
@@ -430,13 +470,15 @@
                     const uniqueSessions = {};
                     data.sessions.forEach(session => {
                         const workerCode = session.worker_code || executorCode;
-                        const sessionKey = `${workerCode}-${session.work_code}`;
+                        const sessionKey = `${workerCode}-${session.order_number}-${session.work_code}`;
                         if (!uniqueSessions[sessionKey]) {
+                            const intervals = JSON.parse(session.intervals || '[]');
+                            const isPaused = !session.current_start || (intervals.length > 0 && !session.current_start);
                             uniqueSessions[sessionKey] = {
-                                intervals: JSON.parse(session.intervals || '[]'),
+                                intervals: intervals,
                                 currentStart: session.current_start || null,
                                 timeLeft: session.time_left || 0,
-                                isPaused: !session.current_start,
+                                isPaused: isPaused,
                                 timerInterval: null,
                                 workDescription: session.work_description || `${session.work_code} ${session.order_number}`,
                                 orderNumber: session.order_number,
@@ -504,109 +546,57 @@
         }
 
         function startWork() {
-        if (!selectedWork || !selectedOrderDescription || !selectedOrder) {
-            console.error('No work or order selected');
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = 'Выберите работу для начала.';
-            errorMessage.style.display = 'block';
-            return;
-        }
-        const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
-        const executorCode = document.getElementById('executor').value;
-        const workerCode = selectedWork.WorkerCode || executorCode;
-        const sessionKey = `${workerCode}-${selectedWork.Code}`;
+            if (!selectedWork || !selectedOrderDescription || !selectedOrder) {
+                console.error('No work or order selected');
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Выберите работу для начала.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+            const executorCode = document.getElementById('executor').value;
+            const workerCode = selectedWork.WorkerCode || executorCode;
+            const sessionKey = `${workerCode}-${selectedOrder}-${selectedWork.Code}`;
 
-        const hasActiveWork = Object.values(sessions).some(session => !session.isPaused);
-        if (hasActiveWork) {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = 'У вас уже есть активная работа. Завершите или поставьте её на паузу перед началом новой.';
-            errorMessage.style.display = 'block';
-            return;
-        }
+            const hasActiveWork = Object.values(sessions).some(session => !session.isPaused);
+            if (hasActiveWork) {
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'У вас уже есть активная работа. Завершите или поставьте её на паузу перед началом новой.';
+                errorMessage.style.display = 'block';
+                return;
+            }
 
-        if (sessions[sessionKey] && sessions[sessionKey].isPaused) {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = 'Эта работа уже на паузе. Продолжите её через список "Работы на паузе".';
-            errorMessage.style.display = 'block';
-            return;
-        }
+            if (sessions[sessionKey] && sessions[sessionKey].isPaused) {
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Эта работа уже на паузе. Продолжите её через список "Работы на паузе".';
+                errorMessage.style.display = 'block';
+                return;
+            }
 
-        if (!sessions[sessionKey]) {
-            const now = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
-            const fullDescription = `Заказ наряд ${selectedOrder} от ${now}, ${selectedOrderDescription}, Номер заказа: ${selectedOrder} ${selectedWork.Code} ${selectedWork.Work}`;
-            sessions[sessionKey] = {
-                orderNumber: selectedOrder,
-                workCode: selectedWork.Code,
-                workerCode: workerCode,
-                timeLeft: parseInt(selectedWork.Sec) || 0, // Устанавливаем корректное начальное время
-                intervals: [],
-                currentStart: now,
-                isPaused: false,
-                timerInterval: null,
-                workDescription: fullDescription
-            };
-            selectedWork.Work = fullDescription;
-            selectedWork.WorkerCode = workerCode;
-        }
+            if (!sessions[sessionKey]) {
+                const now = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
+                const fullDescription = `Заказ наряд ${selectedOrder} от ${now}, ${selectedOrderDescription}, Номер заказа: ${selectedOrder} ${selectedWork.Code} ${selectedWork.Work}`;
+                sessions[sessionKey] = {
+                    orderNumber: selectedOrder,
+                    workCode: selectedWork.Code,
+                    workerCode: workerCode,
+                    timeLeft: parseInt(selectedWork.Sec) || 0,
+                    intervals: [],
+                    currentStart: now,
+                    isPaused: false,
+                    timerInterval: null,
+                    workDescription: fullDescription
+                };
+                selectedWork.Work = fullDescription;
+                selectedWork.WorkerCode = workerCode;
+            }
 
-        currentSessionKey = sessionKey;
-        document.getElementById('startButton').disabled = true;
-        document.getElementById('pauseButton').disabled = false;
-        document.getElementById('pauseButton').textContent = 'Пауза';
-        document.getElementById('finishButton').disabled = false;
-
-        const worksList = document.getElementById('worksList');
-        worksList.innerHTML = '';
-        const row = document.createElement('tr');
-        row.classList.add('fade-in');
-        row.innerHTML = `
-            <td>-</td>
-            <td>${selectedWork.Work}</td>
-            <td>-</td>
-        `;
-        row.onclick = () => {
             currentSessionKey = sessionKey;
             document.getElementById('startButton').disabled = true;
             document.getElementById('pauseButton').disabled = false;
             document.getElementById('pauseButton').textContent = 'Пауза';
             document.getElementById('finishButton').disabled = false;
-            console.log('Active work selected:', selectedWork);
-        };
-        worksList.appendChild(row);
 
-        sendTo1C('start', sessionKey);
-        startTimer(sessionKey);
-        document.getElementById('errorMessage').style.display = 'none';
-        updatePausedWorks(executorName);
-    }
-
-        function togglePause() {
-        if (!currentSessionKey || !sessions[currentSessionKey]) {
-            console.error('No current session to pause/resume');
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = 'Выберите работу для паузы или продолжения.';
-            errorMessage.style.display = 'block';
-            return;
-        }
-
-        const pauseButton = document.getElementById('pauseButton');
-        const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
-
-        if (sessions[currentSessionKey].isPaused) {
-            const hasActiveWork = Object.values(sessions).some(session => !session.isPaused && session !== sessions[currentSessionKey]);
-            if (hasActiveWork) {
-                const errorMessage = document.getElementById('errorMessage');
-                errorMessage.textContent = 'Нельзя продолжить работу, пока другая работа активна.';
-                errorMessage.style.display = 'block';
-                return;
-            }
-            sessions[currentSessionKey].currentStart = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
-            sessions[currentSessionKey].isPaused = false;
-            startTimer(currentSessionKey);
-            pauseButton.textContent = 'Пауза';
-            pauseButton.disabled = false;
-            document.getElementById('finishButton').disabled = false;
-            sendTo1C('resume', currentSessionKey);
             const worksList = document.getElementById('worksList');
             worksList.innerHTML = '';
             const row = document.createElement('tr');
@@ -617,7 +607,7 @@
                 <td>-</td>
             `;
             row.onclick = () => {
-                currentSessionKey = `${selectedWork.WorkerCode}-${selectedWork.Code}`;
+                currentSessionKey = sessionKey;
                 document.getElementById('startButton').disabled = true;
                 document.getElementById('pauseButton').disabled = false;
                 document.getElementById('pauseButton').textContent = 'Пауза';
@@ -625,40 +615,106 @@
                 console.log('Active work selected:', selectedWork);
             };
             worksList.appendChild(row);
-        } else {
-            // Показываем модальное окно для выбора причины паузы
-            const pauseModal = new bootstrap.Modal(document.getElementById('pauseReasonModal'));
-            pauseModal.show();
 
-            document.getElementById('confirmPause').onclick = () => {
-                const selectedReason = document.querySelector('input[name="pauseReason"]:checked').value;
-                const endTime = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
-
-                clearInterval(sessions[currentSessionKey].timerInterval);
-                sessions[currentSessionKey].intervals.push({
-                    start: sessions[currentSessionKey].currentStart,
-                    end: endTime,
-                    reasonCode: selectedReason
-                });
-                sessions[currentSessionKey].currentStart = null;
-                sessions[currentSessionKey].isPaused = true;
-                pauseButton.textContent = 'Продолжить';
-                pauseButton.disabled = true;
-                document.getElementById('finishButton').disabled = true;
-                document.getElementById('startButton').disabled = true;
-
-                sendTo1C('pause', currentSessionKey, selectedReason);
-                currentSessionKey = null;
-                selectedWork = null;
-                fetchWorks(selectedOrder, executorName);
-                pauseModal.hide();
-                // Переносим фокус на кнопку "Пауза" после закрытия модального окна
-                pauseButton.focus();
-            };
+            sendTo1C('start', sessionKey);
+            startTimer(sessionKey);
+            document.getElementById('errorMessage').style.display = 'none';
+            updatePausedWorks(executorName);
         }
-        console.log('Pause toggled, intervals:', sessions[currentSessionKey]?.intervals);
-        updatePausedWorks(executorName);
-    }
+
+        function startTimer(sessionKey) {
+            if (!sessions[sessionKey]) return;
+            if (sessions[sessionKey].timerInterval) clearInterval(sessions[sessionKey].timerInterval);
+
+            sessions[sessionKey].timerInterval = setInterval(() => {
+                if (sessionKey === currentSessionKey && !sessions[sessionKey].isPaused) {
+                    sessions[sessionKey].timeLeft -= 1;
+                    updateTimerDisplay(sessionKey);
+                    if (sessions[sessionKey].timeLeft % 10 === 0) {
+                        sendTo1C('update', sessionKey);
+                    }
+                }
+            }, 1000);
+        }
+
+        function togglePause() {
+            if (!currentSessionKey || !sessions[currentSessionKey]) {
+                console.error('No current session to pause/resume');
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Выберите работу для паузы или продолжения.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            const pauseButton = document.getElementById('pauseButton');
+            const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+
+            if (sessions[currentSessionKey].isPaused) {
+                const hasActiveWork = Object.values(sessions).some(session => !session.isPaused && session !== sessions[currentSessionKey]);
+                if (hasActiveWork) {
+                    const errorMessage = document.getElementById('errorMessage');
+                    errorMessage.textContent = 'Нельзя продолжить работу, пока другая работа активна.';
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+                sessions[currentSessionKey].currentStart = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
+                sessions[currentSessionKey].isPaused = false;
+                startTimer(currentSessionKey);
+                pauseButton.textContent = 'Пауза';
+                pauseButton.disabled = false;
+                document.getElementById('finishButton').disabled = false;
+                sendTo1C('resume', currentSessionKey);
+                const worksList = document.getElementById('worksList');
+                worksList.innerHTML = '';
+                const row = document.createElement('tr');
+                row.classList.add('fade-in');
+                row.innerHTML = `
+                    <td>-</td>
+                    <td>${selectedWork.Work}</td>
+                    <td>-</td>
+                `;
+                row.onclick = () => {
+                    currentSessionKey = `${selectedWork.WorkerCode}-${selectedOrder}-${selectedWork.Code}`;
+                    document.getElementById('startButton').disabled = true;
+                    document.getElementById('pauseButton').disabled = false;
+                    document.getElementById('pauseButton').textContent = 'Пауза';
+                    document.getElementById('finishButton').disabled = false;
+                    console.log('Active work selected:', selectedWork);
+                };
+                worksList.appendChild(row);
+            } else {
+                const pauseModal = new bootstrap.Modal(document.getElementById('pauseReasonModal'));
+                loadPauseReasons();
+                pauseModal.show();
+
+                document.getElementById('confirmPause').onclick = () => {
+                    const selectedReason = document.querySelector('input[name="pauseReason"]:checked').value;
+                    const endTime = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
+
+                    clearInterval(sessions[currentSessionKey].timerInterval);
+                    sessions[currentSessionKey].intervals.push({
+                        start: sessions[currentSessionKey].currentStart,
+                        end: endTime,
+                        reasonCode: selectedReason
+                    });
+                    sessions[currentSessionKey].currentStart = null;
+                    sessions[currentSessionKey].isPaused = true;
+                    pauseButton.textContent = 'Продолжить';
+                    pauseButton.disabled = true;
+                    document.getElementById('finishButton').disabled = true;
+                    document.getElementById('startButton').disabled = true;
+
+                    sendTo1C('pause', currentSessionKey, selectedReason);
+                    currentSessionKey = null;
+                    selectedWork = null;
+                    fetchWorks(selectedOrder, executorName);
+                    pauseModal.hide();
+                    pauseButton.focus();
+                };
+            }
+            console.log('Pause toggled, intervals:', sessions[currentSessionKey]?.intervals);
+            updatePausedWorks(executorName);
+        }
 
         function finishWork() {
             if (!currentSessionKey || !sessions[currentSessionKey]) {
@@ -669,71 +725,50 @@
                 return;
             }
 
-            const confirmFinish = confirm("Завершить работу?");
-            if (confirmFinish) {
-                const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+            const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+            const finishModal = new bootstrap.Modal(document.getElementById('finishConfirmationModal'));
+            finishModal.show();
+
+            document.getElementById('confirmFinish').onclick = () => {
                 clearInterval(sessions[currentSessionKey].timerInterval);
+                const endTime = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
+
                 if (sessions[currentSessionKey].currentStart) {
                     sessions[currentSessionKey].intervals.push({
                         start: sessions[currentSessionKey].currentStart,
-                        end: new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '')
+                        end: endTime
                     });
                 }
+                sessions[currentSessionKey].currentStart = null;
+
+                document.getElementById('startButton').disabled = false;
+                document.getElementById('pauseButton').disabled = true;
+                document.getElementById('pauseButton').textContent = 'Пауза';
+                document.getElementById('finishButton').disabled = true;
                 sendTo1C('finish', currentSessionKey);
-                resetTimer(currentSessionKey);
-                const worksList = document.getElementById('worksList');
-                worksList.innerHTML = '';
-                const row = document.createElement('tr');
-                row.classList.add('fade-in');
-                row.innerHTML = `<td colspan="3">Нет активных работ</td>`;
-                worksList.appendChild(row);
                 console.log('Work finished, intervals:', sessions[currentSessionKey].intervals);
+
                 delete sessions[currentSessionKey];
                 currentSessionKey = null;
-                selectedWork = null;
+
                 fetchWorks(selectedOrder, executorName);
-            } else {
-                console.log('Finish cancelled by user, timer continues');
-            }
+                finishModal.hide();
+                document.getElementById('startButton').focus();
+                updatePausedWorks(executorName);
+            };
+
+            document.getElementById('cancelFinish').onclick = () => {
+                finishModal.hide();
+                document.getElementById('finishButton').focus();
+            };
         }
-
-        function startTimer(sessionKey) {
-        if (!sessions[sessionKey]) return;
-        if (sessions[sessionKey].timerInterval) clearInterval(sessions[sessionKey].timerInterval);
-
-        sessions[sessionKey].timerInterval = setInterval(() => {
-            if (sessionKey === currentSessionKey && !sessions[sessionKey].isPaused) {
-                sessions[sessionKey].timeLeft -= 1;
-                updateTimerDisplay(sessionKey);
-            }
-        }, 1000);
-
-        // Синхронизация с бэкендом, но только если timeLeft не установлено локально
-        setInterval(() => {
-            if (sessionKey === currentSessionKey && !sessions[sessionKey].isPaused) {
-                fetch('/pause/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: `action=check&executor=${encodeURIComponent(document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text)}&worknum=${encodeURIComponent(sessions[sessionKey].workCode)}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.session && data.session.is_active && sessions[sessionKey].timeLeft < 0) {
-                        // Обновляем только если локальный таймер некорректен
-                        sessions[sessionKey].timeLeft = data.session.time_left;
-                        updateTimerDisplay(sessionKey);
-                    }
-                })
-                .catch(error => console.error('Error syncing timer:', error));
-            }
-        }, 10000);
-    }
 
         function updateTimerDisplay(sessionKey) {
             const timerDisplay = document.getElementById('timerDisplay');
+            if (!sessions[sessionKey]) {
+                timerDisplay.textContent = '';
+                return;
+            }
             const timeLeft = sessions[sessionKey].timeLeft;
             if (timeLeft >= 0) {
                 let hours = Math.floor(timeLeft / 3600);
@@ -759,81 +794,81 @@
             document.getElementById('timerDisplay').classList.remove('negative');
             document.getElementById('startButton').disabled = true;
             document.getElementById('pauseButton').disabled = true;
-            document.getElementById('pauseButton').textContent = 'Продолжить';
+            document.getElementById('pauseButton').textContent = 'Пауза';
             document.getElementById('finishButton').disabled = true;
             console.log('Timer reset, buttons disabled');
             updateInterfaceLock();
         }
 
         function sendTo1C(action, sessionKey, reasonCode = null) {
-        let session = sessions[sessionKey];
-        const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
+            let session = sessions[sessionKey];
+            const executorName = document.getElementById('executor').options[document.getElementById('executor').selectedIndex].text;
 
-        if (!session) {
-            if (!selectedWork || !selectedWork.Code || !selectedWork.WorkerCode) {
-                console.error('Cannot start action: selectedWork is incomplete', selectedWork);
-                return;
+            if (!session) {
+                if (!selectedWork || !selectedWork.Code || !selectedWork.WorkerCode) {
+                    console.error('Cannot start action: selectedWork is incomplete', selectedWork);
+                    return;
+                }
+                const now = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, '');
+                session = {
+                    orderNumber: selectedOrder || '',
+                    workCode: selectedWork.Code,
+                    workerCode: selectedWork.WorkerCode,
+                    intervals: [],
+                    currentStart: now,
+                    timeLeft: parseInt(selectedWork.Sec) || 0,
+                    workDescription: `Заказ наряд ${selectedOrder} от ${now}, ${selectedOrderDescription}, Номер заказа: ${selectedOrder} ${selectedWork.Code} ${selectedWork.Work}`,
+                    timerInterval: null,
+                    isPaused: false
+                };
+                sessions[sessionKey] = session;
+                console.log(`Created new session for ${sessionKey}:`, session);
             }
-            session = {
-                orderNumber: selectedOrder || '',
-                workCode: selectedWork.Code,
-                workerCode: selectedWork.WorkerCode,
-                intervals: [],
-                currentStart: new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/,/, ''),
-                timeLeft: parseInt(selectedWork.Sec) || 0,
-                workDescription: selectedWork.Work || ''
-            };
-            sessions[sessionKey] = session;
-            console.log(`Created new session for ${sessionKey}:`, session);
-        }
 
-        const body = new URLSearchParams();
-        body.append('action', action);
-        body.append('ordernum', session.orderNumber || '');
-        body.append('worknum', (session.workCode || '').trim());
-        body.append('executor', executorName);
-        body.append('worker_code', (session.workerCode || '').trim());
-        body.append('time_left', session.timeLeft);
+            const body = new URLSearchParams();
+            body.append('action', action);
+            body.append('ordernum', session.orderNumber || '');
+            body.append('worknum', (session.workCode || '').trim());
+            body.append('executor', executorName);
+            body.append('worker_code', (session.workerCode || '').trim());
+            body.append('time_left', session.timeLeft);
+            body.append('work_description', session.workDescription);
 
-        if (action === 'start') {
-            body.append('start', session.currentStart || '');
-        } else if (action === 'pause' && reasonCode) {
-            const latestInterval = session.intervals[session.intervals.length - 1] || {};
-            body.append('start', latestInterval.start || '');
-            body.append('end', latestInterval.end || '');
-            body.append('reason_code', reasonCode);
-        } else if (action === 'resume') {
-            body.append('start', session.currentStart || ''); // Добавляем start для resume
-        } else if (action === 'finish') {
-            const latestInterval = session.intervals[session.intervals.length - 1] || {};
-            body.append('start', latestInterval.start || '');
-            body.append('end', latestInterval.end || '');
-        }
-
-        fetch('/pause/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: body.toString()
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log(`${action} result:`, data);
-            if (data.message && data.message.includes('1C server not available')) {
-                console.warn('1C server is not available, request logged to file');
+            if (action === 'start' || action === 'resume' || action === 'update') {
+                body.append('start', session.currentStart || '');
+            } else if (action === 'pause' && reasonCode) {
+                const latestInterval = session.intervals[session.intervals.length - 1] || {};
+                body.append('start', latestInterval.start || '');
+                body.append('end', latestInterval.end || '');
+                body.append('reason_code', reasonCode);
+            } else if (action === 'finish') {
+                const latestInterval = session.intervals[session.intervals.length - 1] || {};
+                body.append('start', latestInterval.start || '');
+                body.append('end', latestInterval.end || '');
             }
-        })
-        .catch(error => {
-            console.error(`Error on ${action}:`, error);
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = 'Ошибка отправки в 1C: ' + error.message;
-            errorMessage.style.display = 'block';
-        });
-    }
 
-
+            fetch('/pause/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: body.toString()
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(`${action} result:`, data);
+                if (data.message && data.message.includes('1C server not available')) {
+                    console.warn('1C server is not available, request logged to file');
+                }
+            })
+            .catch(error => {
+                console.error(`Error on ${action}:`, error);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = 'Ошибка отправки в 1C: ' + error.message;
+                errorMessage.style.display = 'block';
+            });
+        }
 
         window.addEventListener('beforeunload', () => {
             Object.keys(sessions).forEach(sessionKey => {

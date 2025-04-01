@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import WorkSession, WorkSessionAction, PauseReason
 
-# Register your models here.
+admin.site.register(WorkSession)
+admin.site.register(WorkSessionAction)
+admin.site.register(PauseReason)
