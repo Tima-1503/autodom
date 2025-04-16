@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 import requests
 from .models import WorkSession, WorkSessionAction, PauseReason
-
+from datetime import datetime, timedelta  # Добавляем импорт timedelta
 BASE_URL = "http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI"
 USERNAME = "ВнешнееСоединение"
 PASSWORD = ""
@@ -90,26 +90,27 @@ def make_pause(request):
         executor = request.POST.get('executor', '')
         worker_code = request.POST.get('worker_code', '')
         intervals = request.POST.get('intervals', '[]')
-        current_start = request.POST.get('start', '')  # Используем 'start' вместо 'current_start'
+        current_start = request.POST.get('start', '')
         time_left = request.POST.get('time_left', '0')
         work_description = request.POST.get('work_description', '')
         reason_code = request.POST.get('reason_code', '')
-        start = request.POST.get('start', '')
         end = request.POST.get('end', '')
 
         print(
             f"Action: {action}, Order: {ordernum}, Work: {worknum}, Executor: {executor}, WorkerCode: {worker_code}, "
             f"Intervals: {intervals}, CurrentStart: {current_start}, TimeLeft: {time_left}, Description: {work_description}, "
-            f"ReasonCode: {reason_code}, Start: {start}, End: {end}")
+            f"ReasonCode: {reason_code}, End: {end}"
+        )
 
-        if action in ['start', 'resume', 'pause', 'finish', 'update'] and not all(
-                [ordernum, worknum, executor]):
+        if action not in ['start', 'pause', 'finish', 'check', 'check_all']:
+            return JsonResponse({'error': 'Invalid action'}, status=400)
+
+        if action in ['start', 'pause', 'finish'] and not all([ordernum, worknum, executor]):
             return JsonResponse({'error': 'Missing required parameters'}, status=400)
 
         if action == 'check':
             try:
-                session = WorkSession.objects.filter(executor=executor, work_code=worknum,
-                                                    is_active=True).first()
+                session = WorkSession.objects.filter(executor=executor, work_code=worknum, is_active=True).first()
                 if session and session.current_start:
                     try:
                         start_time = datetime.strptime(session.current_start, '%d.%m.%Y %H:%M:%S')
@@ -198,13 +199,9 @@ def make_pause(request):
 
         else:
             try:
-                session = WorkSession.objects.filter(
-                    executor=executor,
-                    work_code=worknum,
-                    is_active=True
-                ).first()
+                session = WorkSession.objects.filter(executor=executor, work_code=worknum, is_active=True).first()
 
-                if not session and action in ['start', 'resume']:
+                if not session and action == 'start':
                     session = WorkSession(
                         session_id=str(uuid.uuid4()),
                         worker_code=worker_code or 'unknown',
@@ -212,7 +209,7 @@ def make_pause(request):
                         work_code=worknum,
                         executor=executor,
                         intervals=intervals,
-                        current_start=current_start if current_start else None,
+                        current_start=current_start or datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                         time_left=int(time_left) if time_left else 0,
                         initial_time_left=int(time_left) if time_left else 0,
                         is_active=True,
@@ -225,18 +222,28 @@ def make_pause(request):
                     return JsonResponse({'error': f'Session not found for work {worknum}'}, status=404)
 
                 try:
-                    session.set_intervals(json.loads(intervals))
+                    session_intervals = json.loads(intervals)
                 except json.JSONDecodeError as e:
                     print(f"Invalid intervals JSON: {intervals}, error: {str(e)}")
+                    session_intervals = []
                     session.set_intervals([])
 
+                # Проверка на дублирование запросов
+                if action in ['start', 'pause', 'finish']:
+                    recent_action = WorkSessionAction.objects.filter(
+                        session=session,
+                        action=action,
+                        timestamp__gte=datetime.now() - timedelta(seconds=2)
+                    ).first()
+                    if recent_action:
+                        print(f"Duplicate action detected: {action} for {worknum}, skipping")
+                        return JsonResponse({
+                            'status': 'skipped',
+                            'message': f'Duplicate {action} request detected'
+                        })
+
                 if action == 'start':
-                    session.current_start = current_start
-                    session.time_left = int(time_left)
-                    session.initial_time_left = int(time_left)
-                    session.is_active = True
-                elif action == 'resume':
-                    session.current_start = current_start
+                    session.current_start = current_start or datetime.now().strftime('%d.%m.%Y %H:%M:%S')
                     session.time_left = int(time_left)
                     session.initial_time_left = int(time_left)
                     session.is_active = True
@@ -246,8 +253,8 @@ def make_pause(request):
                             start_time = datetime.strptime(session.current_start, '%d.%m.%Y %H:%M:%S')
                             now = datetime.now()
                             elapsed_seconds = int((now - start_time).total_seconds())
-                            session.time_left = max(session.initial_time_left - elapsed_seconds, 0)
-                            print(f"Pause: Fixed time_left to {session.time_left}")
+                            session.time_left = max(session.initial_time_left - elapsed_seconds, int(time_left))
+                            print(f"Pause: Updated time_left to {session.time_left}")
                         except ValueError as e:
                             print(f"Error parsing current_start '{session.current_start}': {str(e)}")
                             session.time_left = int(time_left)
@@ -259,68 +266,109 @@ def make_pause(request):
                             start_time = datetime.strptime(session.current_start, '%d.%m.%Y %H:%M:%S')
                             now = datetime.now()
                             elapsed_seconds = int((now - start_time).total_seconds())
-                            session.time_left = max(session.initial_time_left - elapsed_seconds, 0)
+                            session.time_left = max(session.initial_time_left - elapsed_seconds, int(time_left))
                         except ValueError as e:
                             print(f"Error parsing current_start '{session.current_start}': {str(e)}")
                             session.time_left = int(time_left)
                     session.current_start = None
                     session.is_active = False
-                elif action == 'update':
-                    session.time_left = int(time_left)
-                    # Не сбрасываем current_start, если оно уже есть, и используем переданное значение только если оно валидно
-                    if current_start and current_start.strip():
-                        session.current_start = current_start
-                    elif not session.current_start:
-                        session.current_start = datetime.now().strftime('%d.%m.%Y %H:%M:%S')  # Устанавливаем текущее время, если не было
 
-                # Всегда обновляем work_description, если оно передано
                 if work_description and work_description.strip():
                     session.work_description = work_description
                 session.worker_code = worker_code or session.worker_code
                 session.save()
 
-                # Сохраняем действие в историю
                 WorkSessionAction.objects.create(
                     session=session,
                     action=action,
                     reason_code=reason_code if action == 'pause' else None,
-                    start=start if action in ['start', 'resume', 'update'] else None,
+                    start=current_start if action == 'start' else None,
                     end=end if action in ['pause', 'finish'] else None
                 )
 
-                if action in ["start", "pause", "resume", "finish", "update"]:
-                    data = {
-                        "OrderNumber": ordernum,
-                        "WorkerCode": worker_code,
-                        "WorkCode": worknum,
-                        "Action": action,
-                        "Intervals": {}
-                    }
-                    if action in ["start", "resume", "update"]:
-                        data["Intervals"]["start"] = start
-                    elif action == "pause" and reason_code:
-                        data["Intervals"]["start"] = start
-                        data["Intervals"]["end"] = end
-                        data["Intervals"]["reasonCode"] = reason_code
-                    elif action == "finish":
-                        data["Intervals"]["start"] = start
-                        data["Intervals"]["end"] = end
+                # Формируем данные в новом формате
+                data = {
+                    "OrderNumber": ordernum,
+                    "WorkerCode": worker_code,
+                    "WorkCode": worknum,
+                    "Action": action,
+                    "Intervals": {}
+                }
+                now = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+                if action == "start":
+                    data["Intervals"]["start"] = session.current_start or now
+                elif action == "pause" and reason_code:
+                    # Ищем последнее start из истории действий
+                    last_start_action = WorkSessionAction.objects.filter(
+                        session=session,
+                        action='start'
+                    ).order_by('-timestamp').first()
+                    start_time = current_start
+                    if not start_time and last_start_action and last_start_action.start:
+                        start_time = last_start_action.start
+                    elif not start_time and session.current_start:
+                        start_time = session.current_start
+                    elif not start_time and session_intervals:
+                        start_time = session_intervals[-1].get('start', '') if session_intervals else ''
+                    data["Intervals"]["start"] = start_time or now
+                    data["Intervals"]["end"] = end or now
+                    data["Intervals"]["reasonCode"] = reason_code
+                elif action == "finish":
+                    last_start_action = WorkSessionAction.objects.filter(
+                        session=session,
+                        action='start'
+                    ).order_by('-timestamp').first()
+                    start_time = current_start
+                    if not start_time and last_start_action and last_start_action.start:
+                        start_time = last_start_action.start
+                    elif not start_time and session.current_start:
+                        start_time = session.current_start
+                    elif not start_time and session_intervals:
+                        start_time = session_intervals[-1].get('start', '') if session_intervals else ''
+                    data["Intervals"]["start"] = start_time or now
+                    data["Intervals"]["end"] = end or now
 
-                    try:
+                try:
+                    # Логируем данные в файл для отладки
+                    with open('1c_requests.txt', 'a', encoding='utf-8') as f:
+                        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        f.write(f"[{timestamp}] POST to {BASE_URL}/makeWorkRecord\n")
+                        f.write(f"Data: {json.dumps(data, ensure_ascii=False, indent=2)}\n")
+                        f.write("---\n")
+
+                    # Отправляем данные на новый endpoint
+                    url = f"{BASE_URL}/makeWorkRecord"
+                    response = requests.post(url, json=data, headers=HEADERS, timeout=5)
+                    if response.status_code == 200:
+                        result = {
+                            'status': 'success',
+                            'message': 'Request successfully sent to 1C',
+                            'response': response.json()
+                        }
+                    else:
+                        print(f"Failed to send request to 1C: {response.status_code} {response.text}")
                         with open('1c_requests.txt', 'a', encoding='utf-8') as f:
                             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                            f.write(f"[{timestamp}] POST to {BASE_URL}/mpause\n")
+                            f.write(f"[{timestamp}] POST to {url}\n")
                             f.write(f"Data: {json.dumps(data, ensure_ascii=False, indent=2)}\n")
+                            f.write(f"Error: {response.status_code} {response.text}\n")
                             f.write("---\n")
                         result = {
                             'status': 'logged',
-                            'message': 'Request logged to 1c_requests.txt (1C server not available)'
+                            'message': f'Request logged to 1c_requests.txt due to error: {response.status_code}'
                         }
-                    except Exception as e:
-                        print(f"Error writing to file: {str(e)}")
-                        result = {'error': f'Failed to log request: {str(e)}'}
-                else:
-                    result = {'status': 'saved', 'message': 'Session updated in database'}
+                except requests.RequestException as e:
+                    print(f"Error sending request to 1C: {str(e)}")
+                    with open('1c_requests.txt', 'a', encoding='utf-8') as f:
+                        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        f.write(f"[{timestamp}] POST to {url}\n")
+                        f.write(f"Data: {json.dumps(data, ensure_ascii=False, indent=2)}\n")
+                        f.write(f"Error: {str(e)}\n")
+                        f.write("---\n")
+                    result = {
+                        'status': 'logged',
+                        'message': f'Request logged to 1c_requests.txt due to error: {str(e)}'
+                    }
 
                 return JsonResponse(result)
             except Exception as e:
