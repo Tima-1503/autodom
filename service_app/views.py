@@ -62,22 +62,45 @@ def get_works(request):
         except requests.RequestException as e:
             works = []
 
-        # Фильтруем работы, исключая те, что уже есть в активных сессиях
-        active_sessions = WorkSession.objects.filter(executor=executor, is_active=True)
-        active_work_codes = {session.work_code for session in active_sessions}
-        works = [work for work in works if work['Code'] not in active_work_codes]
+        # Получаем все активные сессии для данного заказа
+        active_sessions = WorkSession.objects.filter(
+            order_number=order,
+            is_active=True
+        )
+        active_work_codes = {session.work_code.strip() for session in active_sessions}
 
-        # Если есть активная работа (не на паузе), показываем только её
-        active_session = active_sessions.filter(current_start__isnull=False).first()
+        # Получаем паузы для текущего сотрудника
+        paused_sessions = active_sessions.filter(
+            executor=executor,
+            current_start__isnull=True
+        )
+        paused_work_codes = {session.work_code.strip() for session in paused_sessions}
+
+        # Очищаем пробелы в кодах работ из 1C и фильтруем
+        filtered_works = []
+        for work in works:
+            work_code = work.get('Code', '').strip()
+            if work_code and work_code not in active_work_codes and work_code not in paused_work_codes:
+                work['Code'] = work_code  # Обновляем код без пробелов
+                filtered_works.append(work)
+        works = filtered_works
+
+        # Проверяем активные сессии для текущего сотрудника
+        executor_sessions = active_sessions.filter(executor=executor)
+
+        # Проверяем, есть ли активная работа (не на паузе) для сотрудника
+        active_session = executor_sessions.filter(current_start__isnull=False).first()
         if active_session:
+            # Возвращаем только активную работу
             works = [{
-                'Code': active_session.work_code,
+                'Code': active_session.work_code.strip(),
                 'Work': active_session.work_description or active_session.work_code,
                 'ZE': 'N/A',
                 'Sec': active_session.time_left,
                 'WorkerCode': active_session.worker_code
             }]
 
+        print(f"Works returned for executor={executor}, order={order}: {works}")
         return JsonResponse({'works': works})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
@@ -199,7 +222,40 @@ def make_pause(request):
 
         else:
             try:
-                session = WorkSession.objects.filter(executor=executor, work_code=worknum, is_active=True).first()
+                # Проверяем, не взята ли работа другим сотрудником
+                if action == 'start':
+                    existing_session = WorkSession.objects.filter(
+                        order_number=ordernum,
+                        work_code=worknum,
+                        is_active=True
+                    ).exclude(executor=executor).first()
+                    if existing_session:
+                        print(f"Work {worknum} already taken by {existing_session.executor}")
+                        return JsonResponse({
+                            'error': f'Работа {worknum} уже взята сотрудником {existing_session.executor}'
+                        }, status=400)
+
+                # Очищаем старые паузы для этой работы
+                if action == 'start':
+                    old_sessions = WorkSession.objects.filter(
+                        executor=executor,
+                        order_number=ordernum,
+                        work_code=worknum,
+                        is_active=True,
+                        current_start__isnull=True
+                    )
+                    for old_session in old_sessions:
+                        print(f"Closing old paused session: {old_session.session_id}")
+                        old_session.is_active = False
+                        old_session.save()
+
+                session = WorkSession.objects.filter(
+                    executor=executor,
+                    order_number=ordernum,
+                    work_code=worknum,
+                    is_active=True,
+                    current_start__isnull=False  # Только активные, не на паузе
+                ).first()
 
                 if not session and action == 'start':
                     session = WorkSession(
@@ -217,9 +273,18 @@ def make_pause(request):
                     )
                     session.save()
                 elif not session:
-                    existing_sessions = WorkSession.objects.filter(executor=executor, is_active=True)
-                    print(f"No session found for work {worknum}. Existing sessions: {[s.work_code for s in existing_sessions]}")
-                    return JsonResponse({'error': f'Session not found for work {worknum}'}, status=404)
+                    # Проверяем паузы
+                    session = WorkSession.objects.filter(
+                        executor=executor,
+                        order_number=ordernum,
+                        work_code=worknum,
+                        is_active=True,
+                        current_start__isnull=True
+                    ).first()
+                    if not session and action != 'start':
+                        existing_sessions = WorkSession.objects.filter(executor=executor, is_active=True)
+                        print(f"No session found for work {worknum}. Existing sessions: {[s.work_code for s in existing_sessions]}")
+                        return JsonResponse({'error': f'Session not found for work {worknum}'}, status=404)
 
                 try:
                     session_intervals = json.loads(intervals)
@@ -298,7 +363,6 @@ def make_pause(request):
                 if action == "start":
                     data["Intervals"]["start"] = session.current_start or now
                 elif action == "pause" and reason_code:
-                    # Ищем последнее start из истории действий
                     last_start_action = WorkSessionAction.objects.filter(
                         session=session,
                         action='start'
@@ -329,14 +393,12 @@ def make_pause(request):
                     data["Intervals"]["end"] = end or now
 
                 try:
-                    # Логируем данные в файл для отладки
                     with open('1c_requests.txt', 'a', encoding='utf-8') as f:
                         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         f.write(f"[{timestamp}] POST to {BASE_URL}/makeWorkRecord\n")
                         f.write(f"Data: {json.dumps(data, ensure_ascii=False, indent=2)}\n")
                         f.write("---\n")
 
-                    # Отправляем данные на новый endpoint
                     url = f"{BASE_URL}/makeWorkRecord"
                     response = requests.post(url, json=data, headers=HEADERS, timeout=5)
                     if response.status_code == 200:

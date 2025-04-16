@@ -788,3 +788,1076 @@ Data: {
 }
 Error: 204 
 ---
+[2025-04-16 11:56:20] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord2
+Data: {
+  "OrderNumber": "3015-00190",
+  "WorkerCode": "00000064",
+  "WorkCode": "Э0059058",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 11:56:20"
+  }
+}
+---
+[2025-04-16 11:56:20] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3015-00190",
+  "WorkerCode": "00000064",
+  "WorkCode": "Э0059058",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 11:56:20"
+  }
+}
+Error: 204 
+---
+[2025-04-16 11:56:25] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord2
+Data: {
+  "OrderNumber": "3015-00190",
+  "WorkerCode": "00000064",
+  "WorkCode": "Э0059058",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 11:56:20",
+    "end": "16.04.2025 11:56:25",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 11:56:25] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3015-00190",
+  "WorkerCode": "00000064",
+  "WorkCode": "Э0059058",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 11:56:20",
+    "end": "16.04.2025 11:56:25",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 12:22:51] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 12:22:51"
+  }
+}
+---
+[2025-04-16 12:22:51] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 12:22:51"
+  }
+}
+Error: 204 
+---
+[2025-04-16 12:22:56] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 12:22:51",
+    "end": "16.04.2025 12:22:56",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 12:22:57] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 12:22:51",
+    "end": "16.04.2025 12:22:56",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 12:31:13] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 12:31:13"
+  }
+}
+---
+[2025-04-16 12:31:13] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 12:31:13"
+  }
+}
+Error: 500 ﻿{ОбщийМодуль.РаботыМехаников.Модуль(266)}: Значение не является значением объектного типа (НачалоРаботы)
+---
+[2025-04-16 12:31:18] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 12:31:13",
+    "end": "16.04.2025 12:31:18",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 12:31:18] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 12:31:13",
+    "end": "16.04.2025 12:31:18",
+    "reasonCode": "11"
+  }
+}
+Error: 500 ﻿{ОбщийМодуль.РаботыМехаников.Модуль(271)}: Ошибка при вызове метода контекста (ЗаполнитьЗначенияСвойств)
+---
+[2025-04-16 12:31:24] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 12:31:24"
+  }
+}
+---
+[2025-04-16 12:31:24] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 12:31:24"
+  }
+}
+Error: 204 
+---
+[2025-04-16 12:31:29] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 12:31:24",
+    "end": "16.04.2025 12:31:29",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 12:31:29] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 12:31:24",
+    "end": "16.04.2025 12:31:29",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:26:07] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:26:07"
+  }
+}
+---
+[2025-04-16 13:26:07] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:26:07"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:26:11] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:26:07",
+    "end": "16.04.2025 13:26:11",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:26:12] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:26:07",
+    "end": "16.04.2025 13:26:11",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:27:23] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:27:23"
+  }
+}
+---
+[2025-04-16 13:27:23] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:27:23"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:27:27] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:27:23",
+    "end": "16.04.2025 13:27:27",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:27:27] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:27:23",
+    "end": "16.04.2025 13:27:27",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:28:06] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:28:06"
+  }
+}
+---
+[2025-04-16 13:28:06] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:28:06"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:28:10] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:28:06",
+    "end": "16.04.2025 13:28:10",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:28:10] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:28:06",
+    "end": "16.04.2025 13:28:10",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:28:24] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:28:24"
+  }
+}
+---
+[2025-04-16 13:28:24] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:28:24"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:28:28] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:28:24",
+    "end": "16.04.2025 13:28:28",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:28:28] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:28:24",
+    "end": "16.04.2025 13:28:28",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:29:04] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:29:04"
+  }
+}
+---
+[2025-04-16 13:29:04] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:29:04"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:29:08] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:29:04",
+    "end": "16.04.2025 13:29:08",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:29:08] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:29:04",
+    "end": "16.04.2025 13:29:08",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:29:13] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:29:13"
+  }
+}
+---
+[2025-04-16 13:29:13] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:29:13"
+  }
+}
+Error: 500 ﻿{ОбщийМодуль.РаботыМехаников.Модуль(266)}: Значение не является значением объектного типа (НачалоРаботы)
+---
+[2025-04-16 13:29:16] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:29:13",
+    "end": "16.04.2025 13:29:16",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:29:16] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:29:13",
+    "end": "16.04.2025 13:29:16",
+    "reasonCode": "11"
+  }
+}
+Error: 500 ﻿{ОбщийМодуль.РаботыМехаников.Модуль(271)}: Ошибка при вызове метода контекста (ЗаполнитьЗначенияСвойств)
+---
+[2025-04-16 13:29:18] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:29:18"
+  }
+}
+---
+[2025-04-16 13:29:18] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:29:18"
+  }
+}
+Error: 500 ﻿{ОбщийМодуль.РаботыМехаников.Модуль(266)}: Значение не является значением объектного типа (НачалоРаботы)
+---
+[2025-04-16 13:29:27] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:29:18",
+    "end": "16.04.2025 13:29:27",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:29:27] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:29:18",
+    "end": "16.04.2025 13:29:27",
+    "reasonCode": "11"
+  }
+}
+Error: 500 ﻿{ОбщийМодуль.РаботыМехаников.Модуль(271)}: Ошибка при вызове метода контекста (ЗаполнитьЗначенияСвойств)
+---
+[2025-04-16 13:44:52] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:44:52"
+  }
+}
+---
+[2025-04-16 13:44:52] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:44:52"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:45:00] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:44:52",
+    "end": "16.04.2025 13:45:00",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:45:00] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:44:52",
+    "end": "16.04.2025 13:45:00",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:45:06] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:45:06"
+  }
+}
+---
+[2025-04-16 13:45:06] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:45:06"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:45:15] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:45:06",
+    "end": "16.04.2025 13:45:15",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:45:15] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:45:06",
+    "end": "16.04.2025 13:45:15",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:45:22] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:45:22"
+  }
+}
+---
+[2025-04-16 13:45:22] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:45:22"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:45:31] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:45:22",
+    "end": "16.04.2025 13:45:31",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:45:31] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:45:22",
+    "end": "16.04.2025 13:45:31",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:45:37] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:45:37"
+  }
+}
+---
+[2025-04-16 13:45:37] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:45:37"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:45:44] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:45:37",
+    "end": "16.04.2025 13:45:44",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 13:45:44] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 13:45:37",
+    "end": "16.04.2025 13:45:44",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 13:59:21] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:59:21"
+  }
+}
+---
+[2025-04-16 13:59:21] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 13:59:21"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:00:01] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:00:01"
+  }
+}
+---
+[2025-04-16 14:00:01] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:00:01"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:00:04] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:00:01",
+    "end": "16.04.2025 14:00:03",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 14:00:04] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6765-00011",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Ф0010949",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:00:01",
+    "end": "16.04.2025 14:00:03",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:13:36] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:13:36"
+  }
+}
+---
+[2025-04-16 14:13:36] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:13:36"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:13:42] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:13:36",
+    "end": "16.04.2025 14:13:42",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 14:13:42] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "3339-00041",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "Э0002711",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:13:36",
+    "end": "16.04.2025 14:13:42",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:16:54] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:16:54"
+  }
+}
+---
+[2025-04-16 14:16:54] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:16:54"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:53:38] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "0779-00046",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Ю62119",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:53:38"
+  }
+}
+---
+[2025-04-16 14:53:38] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "0779-00046",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Ю62119",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:53:38"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:53:42] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "0779-00046",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Ю62119",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:53:38",
+    "end": "16.04.2025 14:53:42",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 14:53:42] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "0779-00046",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Ю62119",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:53:38",
+    "end": "16.04.2025 14:53:42",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:53:47] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6790-00029",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Э0027552",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:53:47"
+  }
+}
+---
+[2025-04-16 14:53:48] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6790-00029",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Э0027552",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 14:53:47"
+  }
+}
+Error: 204 
+---
+[2025-04-16 14:53:52] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6790-00029",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Э0027552",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:53:47",
+    "end": "16.04.2025 14:53:52",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 14:53:52] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6790-00029",
+  "WorkerCode": "ъ0000341",
+  "WorkCode": "Э0027552",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:53:47",
+    "end": "16.04.2025 14:53:52",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 15:00:29] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:16:54",
+    "end": "16.04.2025 15:00:29",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 15:00:30] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 14:16:54",
+    "end": "16.04.2025 15:00:29",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
+[2025-04-16 15:00:32] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 15:00:32"
+  }
+}
+---
+[2025-04-16 15:00:32] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "start",
+  "Intervals": {
+    "start": "16.04.2025 15:00:32"
+  }
+}
+Error: 204 
+---
+[2025-04-16 15:00:41] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 15:00:32",
+    "end": "16.04.2025 15:00:41",
+    "reasonCode": "11"
+  }
+}
+---
+[2025-04-16 15:00:41] POST to http://192.168.1.3/sklad20/ru_RU/hs/ServiceAPI/makeWorkRecord
+Data: {
+  "OrderNumber": "6113-00020",
+  "WorkerCode": "ъ0000750",
+  "WorkCode": "000011150",
+  "Action": "pause",
+  "Intervals": {
+    "start": "16.04.2025 15:00:32",
+    "end": "16.04.2025 15:00:41",
+    "reasonCode": "11"
+  }
+}
+Error: 204 
+---
