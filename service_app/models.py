@@ -13,7 +13,7 @@ class WorkSession(models.Model):
     initial_time_left = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     work_description = models.TextField(null=True, blank=True)
-
+    is_finished = models.BooleanField(default=False)
     def set_intervals(self, intervals_list):
         self.intervals = json.dumps(intervals_list, ensure_ascii=False)
 
@@ -22,6 +22,8 @@ class WorkSession(models.Model):
 
     def __str__(self):
         return f"{self.worker_code} - {self.work_code} ({'Active' if self.is_active else 'Inactive'})"
+
+
 
 class WorkSessionAction(models.Model):
     session = models.ForeignKey(WorkSession, on_delete=models.CASCADE, related_name='actions')
@@ -45,3 +47,4 @@ class PauseReason(models.Model):
     class Meta:
         verbose_name = "Причина паузы"
         verbose_name_plural = "Причины паузы"
+
